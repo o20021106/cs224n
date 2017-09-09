@@ -41,12 +41,14 @@ def gradcheck_naive(f, x):
 
         numgrad = (cost1-cost2)/ (2*h)
         
+
+        
         ### END YOUR CODE
 
         # Compare gradients
         reldiff = abs(numgrad - grad[ix]) / max(1, abs(numgrad), abs(grad[ix]))
         if reldiff > 1e-5:
-            print ("Gradient check failed.")
+            print ("Gradient check failed")
             print ("First gradient error found at index %s" % str(ix))
             print ("Your gradient: %f \t Numerical gradient: %f" % (
                 grad[ix], numgrad))
