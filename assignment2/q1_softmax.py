@@ -25,13 +25,16 @@ def softmax(x):
 
     ### YOUR CODE HERE
     max_number = tf.reduce_max(x, reduction_indices=[1])
+    
     sess = tf.Session()
     n_samples, n_features= sess.run(tf.shape(x))
     max_number = tf.reshape(max_number, [n_samples,1])
     x_t = x - max_number
 
     exp = tf.exp(x_t)
-    exp_sum = tf.reduce_sum(exp, reduction_indices = [1])
+
+    exp_sum_t = tf.reduce_sum(exp, reduction_indices = [1])
+    exp_sum = tf.reshape(exp_sum_t, [n_samples,1])
     out = exp/exp_sum
     ### END YOUR CODE
 

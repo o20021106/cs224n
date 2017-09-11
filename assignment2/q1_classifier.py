@@ -83,6 +83,7 @@ class SoftmaxModel(Model):
         ### END YOUR CODE
         return feed_dict
 
+
     def add_prediction_op(self):
         """Adds the core transformation for this model which transforms a batch of input
         data into a batch of predictions. In this case, the transformation is a linear layer plus a
@@ -100,6 +101,9 @@ class SoftmaxModel(Model):
             pred: A tensor of shape (batch_size, n_classes)
         """
         ### YOUR CODE HERE
+        W = tf.get_variable('W', initializer = tf.zeros([self.config.n_features,self.config.n_classes], dtype = tf.float32))
+        b = tf.get_variable('b', initializer = tf.zeros([1,self.config.n_classes], dtype = tf.float32)) 
+        pred = softmax(tf.matmul(self.input_placeholder, W)+b)
         ### END YOUR CODE
         return pred
 
@@ -114,6 +118,7 @@ class SoftmaxModel(Model):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE
+        loss = cross_entropy_loss(self.labels_placeholder, pred)
         ### END YOUR CODE
         return loss
 
@@ -137,6 +142,10 @@ class SoftmaxModel(Model):
             train_op: The Op for training.
         """
         ### YOUR CODE HERE
+        gdescent = tf.train.GradientDescentOptimizer(self.config.lr)
+        train_op = gdescent.minimize(loss, var_list = tf.global_variables())
+        
+        
         ### END YOUR CODE
         return train_op
 
