@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Sep 12 23:13:02 2017
+
+@author: iping
+"""
+
 import os
 import time
 import tensorflow as tf
@@ -11,7 +19,6 @@ from utils.parser_utils import minibatches, load_and_preprocess_data
 
 class Config(object):
     """Holds model hyperparams and data information.
-
     The config class is used to store various hyperparameters and dataset
     information parameters. Model objects are passed a Config() object at
     instantiation.
@@ -35,48 +42,40 @@ class ParserModel(Model):
 
     def add_placeholders(self):
         """Generates placeholder variables to represent the input tensors
-
         These placeholders are used as inputs by the rest of the model building and will be fed
         data during training.  Note that when "None" is in a placeholder's shape, it's flexible
         (so we can use different batch sizes without rebuilding the model).
-
         Adds following nodes to the computational graph
-
         input_placeholder: Input placeholder tensor of  shape (None, n_features), type tf.int32
         labels_placeholder: Labels placeholder tensor of shape (None, n_classes), type tf.float32
         dropout_placeholder: Dropout value placeholder (scalar), type tf.float32
-
         Add these placeholders to self as the instance variables
             self.input_placeholder
             self.labels_placeholder
             self.dropout_placeholder
-
         (Don't change the variable names)
         """
         ### YOUR CODE HERE
-        
-        self.input_placeholder = tf.placeholder(tf.int32, shape = (None, self.config.n_features))
-        self.labels_placeholder = tf.placeholder(tf.int32, shape = (None, self.config.n_classes))
-        self.dropout_placeholder = tf.placeholder(tf.float32)
+        n_features = self.config.n_features
+        n_classes = self.config.n_classes
 
-        
+        self.input_placeholder = tf.placeholder(tf.int32,
+                                                shape=(None, n_features))
+        self.labels_placeholder = tf.placeholder(tf.float32,
+                                                 (None, n_classes))
+        self.dropout_placeholder = tf.placeholder(tf.float32)
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=1):
         """Creates the feed_dict for the dependency parser.
-
         A feed_dict takes the form of:
-
         feed_dict = {
                 <placeholder>: <tensor of values to be passed for placeholder>,
                 ....
         }
-
-
         Hint: The keys for the feed_dict should be a subset of the placeholder
                     tensors created in add_placeholders.
         Hint: When an argument is None, don't add it to the feed_dict.
-
         Args:
             inputs_batch: A batch of input data.
             labels_batch: A batch of label data.
@@ -85,12 +84,14 @@ class ParserModel(Model):
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
         ### YOUR CODE HERE
-        
-        feed_dict = { self.input_placeholder: inputs_batch,
-                      self.dropout_placeholder: dropout
-                     }
+        feed_dict = {
+            self.input_placeholder: inputs_batch,
+            self.dropout_placeholder: dropout
+        }
+
         if labels_batch is not None:
             feed_dict[self.labels_placeholder] = labels_batch
+
         ### END YOUR CODE
         return feed_dict
 
@@ -102,20 +103,22 @@ class ParserModel(Model):
               tensor of shape (None, n_features, embedding_size).
             - Concatenates the embeddings by reshaping the embeddings tensor to shape
               (None, n_features * embedding_size).
-
         Hint: You might find tf.nn.embedding_lookup useful.
         Hint: You can use tf.reshape to concatenate the vectors. See following link to understand
             what -1 in a shape means.
             https://www.tensorflow.org/api_docs/python/array_ops/shapes_and_shaping#reshape.
-
         Returns:
             embeddings: tf.Tensor of shape (None, n_features*embed_size)
         """
         ### YOUR CODE HERE
-        embedding = tf.Variable(self.pretrained_embeddings)
-        lookup = tf.nn.embedding_lookup(embedding, self.input_placeholder)
-        embeddings = tf.reshape(lookup, [-1, self.config.embed_size*self.config.n_features])
+        n_features = self.config.n_features
+        embedding_size = self.config.embed_size
+
+        vocabulary = tf.Variable(self.pretrained_embeddings)
+        embeddings = tf.nn.embedding_lookup(vocabulary, self.input_placeholder)
+        embeddings = tf.reshape(embeddings, (-1, n_features * embedding_size))
         ### END YOUR CODE
+
         return embeddings
 
     def add_prediction_op(self):
@@ -123,41 +126,41 @@ class ParserModel(Model):
             h = Relu(xW + b1)
             h_drop = Dropout(h, dropout_rate)
             pred = h_dropU + b2
-
         Note that we are not applying a softmax to pred. The softmax will instead be done in
         the add_loss_op function, which improves efficiency because we can use
         tf.nn.softmax_cross_entropy_with_logits
-
         Use the initializer from q2_initialization.py to initialize W and U (you can initialize b1
         and b2 with zeros)
-
         Hint: Here are the dimensions of the various variables you will need to create
                     W:  (n_features*embed_size, hidden_size)
                     b1: (hidden_size,)
                     U:  (hidden_size, n_classes)
                     b2: (n_classes)
-        Hint: Note that tf.nn.dropout takes the keep probability (1 - p_drop) as an argument. 
+        Hint: Note that tf.nn.dropout takes the keep probability (1 - p_drop) as an argument.
             The keep probability should be set to the value of self.dropout_placeholder
-
         Returns:
             pred: tf.Tensor of shape (batch_size, n_classes)
         """
 
         x = self.add_embedding()
         ### YOUR CODE HERE
-        xavier_initializer = xavier_weight_init()
-        W = tf.get_variable("W", initializer = xavier_initializer((self.config.n_features*self.config.embed_size, self.config.hidden_size)), dtype = tf.float32)
-        U = tf.get_variable("U", initializer = xavier_initializer((self.config.hidden_size, self.config.n_classes)), dtype = tf.float32)
-        b1 = tf.get_variable("b1", initializer = tf.zeros(self.config.hidden_size))
-        b2 = tf.get_variable("b2", initializer = tf.zeros(self.config.n_classes))
+        xavier_init = xavier_weight_init()
 
-        trans = tf.matmul(x,W)+b1
-        h = tf.nn.relu(trans)
-        keep = self.dropout_placeholder
-        h_drop = tf.nn.dropout(h, keep)
-        pred = tf.matmul(h_drop,U)+b2
-        
-        
+        n_features = self.config.n_features
+        n_classes = self.config.n_classes
+        embed_size = self.config.embed_size
+        hidden_size = self.config.hidden_size
+
+        W = tf.Variable(
+            xavier_init((n_features * embed_size, hidden_size)))
+        b1 = tf.Variable(xavier_init((1, hidden_size)))
+        U = tf.Variable(xavier_init((hidden_size, n_classes)))
+        b2 = tf.Variable(xavier_init((1, n_classes)))
+
+        z = tf.add(tf.matmul(x, W), b1)
+        h = tf.nn.relu(z)
+        h_drop = tf.nn.dropout(h, self.dropout_placeholder)
+        pred = tf.add(tf.matmul(h_drop, U), b2)
         ### END YOUR CODE
         return pred
 
@@ -165,7 +168,6 @@ class ParserModel(Model):
         """Adds Ops for the loss function to the computational graph.
         In this case we are using cross entropy loss.
         The loss should be averaged over all examples in the current minibatch.
-
         Hint: You can use tf.nn.softmax_cross_entropy_with_logits to simplify your
                     implementation. You might find tf.reduce_mean useful.
         Args:
@@ -175,32 +177,30 @@ class ParserModel(Model):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE
-        
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits = pred, labels = self.labels_placeholder))
+        probs = tf.nn.softmax_cross_entropy_with_logits(
+            logits = pred,
+            labels = self.labels_placeholder)
+        loss = tf.reduce_mean(probs)
         ### END YOUR CODE
         return loss
 
     def add_training_op(self, loss):
         """Sets up the training Ops.
-
         Creates an optimizer and applies the gradients to all trainable variables.
         The Op returned by this function is what must be passed to the
         `sess.run()` call to cause the model to train. See
-
         https://www.tensorflow.org/versions/r0.7/api_docs/python/train.html#Optimizer
-
         for more information.
-
         Use tf.train.AdamOptimizer for this model.
         Calling optimizer.minimize() will return a train_op object.
-
         Args:
             loss: Loss tensor, from cross_entropy_loss.
         Returns:
             train_op: The Op for training.
         """
         ### YOUR CODE HERE
-        train_op = tf.train.AdamOptimizer(self.config.lr).minimize(loss)
+        optimizer = tf.train.AdamOptimizer(self.config.lr)
+        train_op = optimizer.minimize(loss)
         ### END YOUR CODE
         return train_op
 
@@ -216,7 +216,7 @@ class ParserModel(Model):
             loss = self.train_on_batch(sess, train_x, train_y)
             prog.update(i + 1, [("train loss", loss)])
 
-        print ("Evaluating on dev set",)
+        print ("Evaluating on dev set")
         dev_UAS, _ = parser.parse(dev_set)
         print ("- dev UAS: {:.2f}".format(dev_UAS * 100.0))
         return dev_UAS
@@ -249,7 +249,7 @@ def main(debug=True):
         os.makedirs('./data/weights/')
 
     with tf.Graph().as_default():
-        print ("Building model...")
+        print ("Building model...",)
         start = time.time()
         model = ParserModel(config, embeddings)
         parser.model = model
@@ -286,5 +286,3 @@ def main(debug=True):
 
 if __name__ == '__main__':
     main()
-
-

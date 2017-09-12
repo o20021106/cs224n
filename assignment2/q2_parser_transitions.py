@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Sep 12 23:25:45 2017
+
+@author: iping
+"""
+
 class PartialParse(object):
     def __init__(self, sentence):
         """Initializes this partial parse.
@@ -96,10 +104,13 @@ def minibatch_parse(sentences, model, batch_size):
         transitions = model.predict(parses_t)
         _ = [ parse.parse_step(transition) for parse, transition in zip( unfinished_parses[:batch_size],transitions)]
         for index, i in enumerate(unfinished_parses[:batch_size]):
-            if len(i.stack) == 1 :
-                del unfinished_parses[index]
+            #if len(i.stack) < 2 and len(i.buffer)<1 :
+            if len(i.stack) < 2 and len(i.buffer) < 1:
+                unfinished_parses.remove(i)
+                #del unfinished_parses[index]
 
     dependencies = [i.dependencies for i in partial_parses]
+    
     ### END YOUR CODE
 
     return dependencies
@@ -189,3 +200,4 @@ if __name__ == '__main__':
     test_parse_step()
     test_parse()
     test_minibatch_parse()
+
